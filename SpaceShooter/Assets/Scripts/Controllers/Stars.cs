@@ -28,23 +28,30 @@ public class Stars : MonoBehaviour
         StartCoroutine(Draw());
     }
 
-    // Coroutine to draw the line between two stars
+    // Coroutine to draw the lines between stars
     IEnumerator Draw()
     {
         // Loop from the first star to the last
         for (int i = 0; i < starTransforms.Count - 1; i++)
         {
+            // Get the starting star and the one to draw a line to
             currentStar = starTransforms[i].position;
             nextStar = starTransforms[i + 1].position;
 
             // Draw the line
-            for (int j = 10; j > 0; j--)
+            float time = 0;
+            while (time <= drawingTime)
             {
-                Vector3 line = currentStar + (nextStar - currentStar) / j;
-                Debug.DrawLine(currentStar, line, Color.white, drawingTime / 10);
-                yield return new WaitForSeconds(drawingTime / 10);
+                // Lerp to draw the line gradually
+                Vector3 line = Vector3.Lerp(currentStar, nextStar, time * 2);
+                Debug.DrawLine(currentStar, line, Color.white, 0.1f);
+                time += Time.deltaTime;
+                yield return new WaitForSeconds(Time.deltaTime);
             }
         }
+
+        // Done drawing
         StopCoroutine(Draw());
+        drawing = false;
     }
 }
