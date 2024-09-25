@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
+using Unity.Android.Types;
+using System.Collections.Generic;
+using static Codice.CM.Common.CmCallContext;
 
 public class Enemy : MonoBehaviour
 {
@@ -242,4 +245,5 @@ public class Enemy : MonoBehaviour
             if (player.transform.position.y > transform.position.y && moveDown) decelerateDown = true;
         }
     }
+
 }

@@ -17,15 +17,23 @@ public class Player : MonoBehaviour
     public bool moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
     public bool decelerateLeft = false, decelerateRight = false, decelerateUp = false, decelerateDown = false;
 
+    Color radarColor = Color.green;
+    public float radarRange = 3;
+    public int radarPoints = 5;
+    List<Vector3> pointPositions;
+
     private void Start()
     {
         // Calculate acceleration
         acceleration = maxSpeed / accelerationTime;
+
+        pointPositions = new List<Vector3>(radarPoints);
     }
 
     void Update()
     {
         PlayerMovement();
+        EnemyRadar(radarRange, radarPoints);
     }
 
     // Method to move the ship
@@ -232,6 +240,37 @@ public class Player : MonoBehaviour
 
             // Move position
             transform.position += verticalVelocity * Time.deltaTime * direction;
+        }
+    }
+
+    // Method to create a radar around the enemy
+    public void EnemyRadar(float radius, int circlePoints)
+    {
+        // Change the color of the radar if the player is within the radius
+        float distance = Vector3.Distance(enemyTransform.position, transform.position);
+        if (distance <= radius) radarColor = Color.red;
+        else radarColor = Color.green;
+
+        // Get the space between each circle point
+        float angle = 360 / circlePoints;
+
+        // Add the points to the vector list
+        for (int i = 0; i < circlePoints; i++)
+        {
+            // Multiply the angle by i + 1 to increment it
+            Vector3 position = new Vector3(Mathf.Cos(angle * (i + 1) * Mathf.Deg2Rad), Mathf.Sin(angle * (i + 1) * Mathf.Deg2Rad), 0) * radius + transform.position;
+            pointPositions.Insert(i, position);
+        }
+
+        // Draw the lines
+        for(int i = 0; i < pointPositions.Count - 1; i++)
+        {
+            // If the first position draw to the last position
+            if (i == 0) Debug.DrawLine(pointPositions[i], pointPositions[pointPositions.Count - 1], Color.red);
+            else if (i > 0 && i < pointPositions.Count - 1)
+            {
+                Debug.DrawLine(pointPositions[i - 1], pointPositions[i], radarColor);
+            }
         }
     }
 
