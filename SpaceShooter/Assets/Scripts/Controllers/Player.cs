@@ -22,18 +22,36 @@ public class Player : MonoBehaviour
     public int radarPoints = 5;
     List<Vector3> pointPositions;
 
+    public GameObject powerupPrefab;
+    public float powerupRange = 2;
+    public int numberOfPowerups = 6;
+    List<GameObject> powerUps;
+
     private void Start()
     {
         // Calculate acceleration
         acceleration = maxSpeed / accelerationTime;
 
+        // Create a list of vectors for the radar points
+        Time.timeScale = 1;
         pointPositions = new List<Vector3>(radarPoints);
+
+        // Create a list of powerup prefabs
+        powerUps = new List<GameObject>(numberOfPowerups);
+        for(int i = 0; i < numberOfPowerups; i++)
+        {
+            powerUps.Insert(i, Instantiate(powerupPrefab));
+        }
     }
 
     void Update()
     {
         PlayerMovement();
+
         EnemyRadar(radarRange, radarPoints);
+
+        // Call the method to place powerups
+        SpawnPowerups(powerupRange, numberOfPowerups);
     }
 
     // Method to move the ship
@@ -243,10 +261,10 @@ public class Player : MonoBehaviour
         }
     }
 
-    // Method to create a radar around the enemy
+    // Method to create a radar around the player
     public void EnemyRadar(float radius, int circlePoints)
     {
-        // Change the color of the radar if the player is within the radius
+        // Change the color of the radar if the enemy is within the radius
         float distance = Vector3.Distance(enemyTransform.position, transform.position);
         if (distance <= radius) radarColor = Color.red;
         else radarColor = Color.green;
@@ -266,12 +284,23 @@ public class Player : MonoBehaviour
         for(int i = 0; i < pointPositions.Count - 1; i++)
         {
             // If the first position draw to the last position
-            if (i == 0) Debug.DrawLine(pointPositions[i], pointPositions[pointPositions.Count - 1], Color.red);
-            else if (i > 0 && i < pointPositions.Count - 1)
-            {
-                Debug.DrawLine(pointPositions[i - 1], pointPositions[i], radarColor);
-            }
+            if (i < pointPositions.Count - 1) Debug.DrawLine(pointPositions[i], pointPositions[i + 1], radarColor, 0f);
+            else Debug.DrawLine(pointPositions[i], pointPositions[0], radarColor, 0f);
         }
     }
 
+    // Method to place power ups around the player
+    public void SpawnPowerups(float radius, int numberOfPowerups)
+    {
+        // Get an equal angle spacer
+        float angle = 360 / numberOfPowerups;
+
+        // Place each powerup
+        for(int i = 0; i < numberOfPowerups; i++)
+        {
+            // Place a powerup at the position
+            Vector3 position = new Vector3(Mathf.Cos(angle * (i + 1) * Mathf.Deg2Rad), Mathf.Sin(angle * (i + 1) * Mathf.Deg2Rad), 0) * radius + transform.position;
+            powerUps[i].transform.position = position;
+        }
+    }
 }
