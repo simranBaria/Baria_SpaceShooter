@@ -15,15 +15,36 @@ public class Enemy : MonoBehaviour
     public bool moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
     public bool decelerateLeft = false, decelerateRight = false, decelerateUp = false, decelerateDown = false;
 
+    public GameObject missilePrefab;
+    public float missileInterval;
+    float timer;
+    public bool won = false;
+
     private void Start()
     {
         // Calculate acceleration
         acceleration = maxSpeed / accelerationTime;
+
+        // Set the timer
+        timer = missileInterval;
     }
 
     void Update()
     {
-        EnemyMovement();
+        // Don't move if the player died
+        if (!won)
+        {
+            // Move
+            EnemyMovement();
+
+            // Spawn a missile if the timer hits 0
+            if (timer <= 0)
+            {
+                Instantiate(missilePrefab, transform.position, Quaternion.identity);
+                timer = missileInterval;
+            }
+            else timer -= Time.deltaTime;
+        }
     }
 
     // Method to move the enemy

@@ -20,21 +20,25 @@ public class Player : MonoBehaviour
     Color radarColor = Color.green;
     public float radarRange = 3;
     public int radarPoints = 5;
-    List<Vector3> pointPositions;
 
     public GameObject powerupPrefab;
     public float powerupRange = 2;
     public int numberOfPowerups = 6;
     List<GameObject> powerUps;
 
+    public bool won = false;
+
+    public bool boosting = false;
+    public float speedMultiplier = 2, boostTime;
+    float boostCountdown;
+    public SpriteRenderer shipSprite;
+
+    public bool shield = false;
+
     private void Start()
     {
         // Calculate acceleration
         acceleration = maxSpeed / accelerationTime;
-
-        // Create a list of vectors for the radar points
-        Time.timeScale = 1;
-        pointPositions = new List<Vector3>(radarPoints);
 
         // Create a list of powerup prefabs
         powerUps = new List<GameObject>(numberOfPowerups);
@@ -42,16 +46,77 @@ public class Player : MonoBehaviour
         {
             powerUps.Insert(i, Instantiate(powerupPrefab));
         }
+
+        // Set the boost countdown
+        boostCountdown = boostTime;
     }
 
     void Update()
     {
+        // Move the player
         PlayerMovement();
 
-        EnemyRadar(radarRange, radarPoints);
+        // Call the method to place powerups as long as there are powerups to display
+        if(numberOfPowerups != 0) SpawnPowerups(powerupRange, numberOfPowerups);
 
-        // Call the method to place powerups
-        SpawnPowerups(powerupRange, numberOfPowerups);
+        // Spawn a bomb
+        if(Input.GetKeyDown(KeyCode.Z)) Instantiate(bombPrefab, transform.position, Quaternion.identity);
+
+        // Speed boost
+        if(Input.GetKeyDown(KeyCode.X))
+        {
+            // Only boost if there's enough power ups and the player isn't currently boosting
+            if(numberOfPowerups > 0 && !boosting)
+            {
+                // Use a power up
+                Destroy(powerUps[numberOfPowerups - 1]);
+                numberOfPowerups--;
+
+                // Boost the speed
+                boosting = true;
+                maxSpeed *= speedMultiplier;
+
+                // Change the ship colour
+                shipSprite.color = Color.cyan;
+            }
+        }
+        // Countdown the boost timer until speed should be reset
+        if(boosting)
+        {
+            // Decrease the timer
+            boostCountdown -= Time.deltaTime;
+
+            if (boostCountdown <= 0)
+            {
+                // Reset the countdown
+                boostCountdown = boostTime;
+
+                // Reset speed and turn off the boost
+                boosting = false;
+                maxSpeed /= speedMultiplier;
+
+                // Reset the ship colour
+                shipSprite.color = Color.white;
+            }
+        }
+
+        // Shield
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            // Only turn on the shield if there's enough power ups and a shield isn't currently active
+            if(numberOfPowerups > 0 && !shield)
+            {
+                // Use a power up
+                Destroy(powerUps[numberOfPowerups - 1]);
+                numberOfPowerups--;
+
+                // Activate the shield
+                shield = true;
+            }
+        }
+
+        // Spawn the shield as long as the enemy is still alive
+        if (!won && shield) EnemyRadar(radarRange, radarPoints);
     }
 
     // Method to move the ship
@@ -106,8 +171,14 @@ public class Player : MonoBehaviour
             }
             else direction = Vector3.left;
 
-            // Move position
-            transform.position += horizontalVelocity * Time.deltaTime * direction;
+            // Get the translation
+            Vector3 translation = horizontalVelocity * Time.deltaTime * direction;
+
+            // Boost the speed
+            if (boosting) translation *= speedMultiplier;
+
+            // Move the position
+            transform.position += translation;
         }
 
         // Right input
@@ -156,8 +227,14 @@ public class Player : MonoBehaviour
             }
             else direction = Vector3.right;
 
-            // Move position
-            transform.position += horizontalVelocity * Time.deltaTime * direction;
+            // Get the translation
+            Vector3 translation = horizontalVelocity * Time.deltaTime * direction;
+
+            // Boost the speed
+            if (boosting) translation *= speedMultiplier;
+
+            // Move the position
+            transform.position += translation;
         }
 
         // Up input
@@ -206,8 +283,14 @@ public class Player : MonoBehaviour
             }
             else direction = Vector3.up;
 
-            // Move position
-            transform.position += verticalVelocity * Time.deltaTime * direction;
+            // Get the translation
+            Vector3 translation = verticalVelocity * Time.deltaTime * direction;
+
+            // Boost the speed
+            if (boosting) translation *= speedMultiplier;
+
+            // Move the position
+            transform.position += translation;
         }
 
         // Down input
@@ -256,8 +339,14 @@ public class Player : MonoBehaviour
             }
             else direction = Vector3.down;
 
-            // Move position
-            transform.position += verticalVelocity * Time.deltaTime * direction;
+            // Get the translation
+            Vector3 translation = verticalVelocity * Time.deltaTime * direction;
+
+            // Boost the speed
+            if (boosting) translation *= speedMultiplier;
+
+            // Move the position
+            transform.position += translation;
         }
     }
 
@@ -272,20 +361,27 @@ public class Player : MonoBehaviour
         // Get the space between each circle point
         float angle = 360 / circlePoints;
 
-        // Add the points to the vector list
-        for (int i = 0; i < circlePoints; i++)
+        // Draw the radar
+        for(int i = 0; i < circlePoints; i++)
         {
-            // Multiply the angle by i + 1 to increment it
-            Vector3 position = new Vector3(Mathf.Cos(angle * (i + 1) * Mathf.Deg2Rad), Mathf.Sin(angle * (i + 1) * Mathf.Deg2Rad), 0) * radius + transform.position;
-            pointPositions.Insert(i, position);
-        }
+            // Initialize variables for the start and end of the line
+            Vector3 start;
+            Vector3 end;
 
-        // Draw the lines
-        for(int i = 0; i < pointPositions.Count - 1; i++)
-        {
-            // If the first position draw to the last position
-            if (i < pointPositions.Count - 1) Debug.DrawLine(pointPositions[i], pointPositions[i + 1], radarColor, 0f);
-            else Debug.DrawLine(pointPositions[i], pointPositions[0], radarColor, 0f);
+            // If at the end of the points, connect the line to the start
+            if(i == circlePoints - 1)
+            {
+                start = new Vector3(Mathf.Cos(angle * i * Mathf.Deg2Rad), Mathf.Sin(angle * i * Mathf.Deg2Rad), 0) * radius + transform.position;
+                end = new Vector3(Mathf.Cos(angle * 0 * Mathf.Deg2Rad), Mathf.Sin(angle * 0 * Mathf.Deg2Rad), 0) * radius + transform.position;
+            }
+            // Else draw from this point to the next
+            else
+            {
+                start = new Vector3(Mathf.Cos(angle * i * Mathf.Deg2Rad), Mathf.Sin(angle * i * Mathf.Deg2Rad), 0) * radius + transform.position;
+                end = new Vector3(Mathf.Cos(angle * (i + 1) * Mathf.Deg2Rad), Mathf.Sin(angle * (i + 1) * Mathf.Deg2Rad), 0) * radius + transform.position;
+            }
+            
+            Debug.DrawLine(start, end, radarColor);
         }
     }
 
